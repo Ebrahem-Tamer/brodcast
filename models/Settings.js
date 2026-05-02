@@ -1,15 +1,6 @@
-const mongoose = require('mongoose');
+const { createModel } = require('../storage/jsonStore');
 
-const settingsSchema = new mongoose.Schema({
-    key: {
-        type: String,
-        required: true,
-        unique: true
-    },
-    value: {
-        type: mongoose.Schema.Types.Mixed,
-        required: true
-    }
+module.exports = createModel('settings', {
+    key: '',
+    value: null
 });
-
-module.exports = mongoose.model('Settings', settingsSchema);

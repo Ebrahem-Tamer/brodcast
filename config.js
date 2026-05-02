@@ -2,7 +2,6 @@ module.exports = {
     PORT: Number(process.env.PORT || process.env.DASHBOARD_PORT || '3000'),
     HOST: process.env.HOST || '0.0.0.0',
     PUBLIC_URL: process.env.DASHBOARD_PUBLIC_URL || process.env.PUBLIC_URL || process.env.BASE_URL || '',
-    MONGO_URI: process.env.MONGO_URI || 'mongodb+srv://falconsrp2026_db_user:Falcons2026db123@clu.wts5pci.mongodb.net/broadcast_bot?retryWrites=true&w=majority&appName=Clu',
     BOT_STATUS_TEXT: process.env.BOT_STATUS_TEXT || 'Falcons RP ',
     BOT_STATUS_TYPE: process.env.BOT_STATUS_TYPE || 'Playing',
     STREAMING_URL: process.env.STREAMING_URL || '',

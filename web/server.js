@@ -1,8 +1,8 @@
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
-const path = require('path');
 const fs = require('fs');
+const path = require('path');
 const cors = require('cors');
 
 function resolveBaseUrl(host, port, publicUrl) {
@@ -67,7 +67,7 @@ async function startWebServer(deps) {
       const totalBots = await Bot.countDocuments();
       const activeBots = await Bot.countDocuments({ status: 'active' });
       const bannedBots = await Bot.countDocuments({ status: 'banned' });
-      const latestBroadcast = await Broadcast.findOne().sort({ startTime: -1 });
+      const latestBroadcast = await botManager.getLatestBroadcast();
 
       res.json({
         totalBots,
@@ -83,25 +83,11 @@ async function startWebServer(deps) {
   app.post('/api/bots/add', async (req, res) => {
     const { token } = req.body;
     try {
-      await botManager.addBot(token);
-
-      const configPath = path.join(__dirname, '..', 'config.js');
-      let configContent = fs.readFileSync(configPath, 'utf8');
-      const tokenRegex = /BOT_TOKENS:\s*\[([\s\S]*?)\]/;
-      const match = configContent.match(tokenRegex);
-
-      if (match) {
-        let tokensPart = match[1].trim();
-        if (!tokensPart.includes(token)) {
-          const separator = tokensPart ? ',\n        ' : '\n        ';
-          const newTokenEntry = `${separator}"${token}"`;
-          const newPart = tokensPart + newTokenEntry;
-          const newConfigContent = configContent.replace(tokenRegex, `BOT_TOKENS: [\n        ${newPart}\n    ]`);
-          fs.writeFileSync(configPath, newConfigContent);
-          console.log(`Added new token to config.js: ${token.substring(0, 10)}...`);
-        }
+      if (!token) {
+        return res.status(400).json({ error: 'Token is required' });
       }
 
+      await botManager.addBot(token);
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: error.message });
@@ -123,24 +109,6 @@ async function startWebServer(deps) {
       if (!bot) return res.status(404).json({ error: 'Bot not found' });
 
       botManager.removeBotClient(bot.token);
-
-      const configPath = path.join(__dirname, '..', 'config.js');
-      let configContent = fs.readFileSync(configPath, 'utf8');
-      const tokenRegex = /BOT_TOKENS:\s*\[([\s\S]*?)\]/;
-      const match = configContent.match(tokenRegex);
-
-      if (match) {
-        let tokensPart = match[1];
-        const escapedToken = bot.token.replace(/[.*+?^${}()|[\\]/g, '\\$&');
-        const tokenLineRegex = new RegExp(`,?\s*"${escapedToken}"\s*,?`, 'g');
-        let newTokensPart = tokensPart.replace(tokenLineRegex, () => '')
-          .trim()
-          .replace(/^,|,$/g, '')
-          .trim();
-
-        const newConfigContent = configContent.replace(tokenRegex, `BOT_TOKENS: [\n        ${newTokensPart}\n    ]`);
-        fs.writeFileSync(configPath, newConfigContent);
-      }
 
       await Bot.findByIdAndDelete(req.params.id);
       res.json({ success: true });
@@ -187,7 +155,7 @@ async function startWebServer(deps) {
       const stats = {
         activeBots: await Bot.countDocuments({ status: 'active' }),
         bannedBots: await Bot.countDocuments({ status: 'banned' }),
-        broadcast: await Broadcast.findOne().sort({ startTime: -1 })
+        latestBroadcast: await botManager.getLatestBroadcast()
       };
       io.emit('statsUpdate', stats);
     } catch (error) {
